@@ -1,7 +1,8 @@
 (ns sv.js-deps.core
   (:require [clj-http.client :as h]
             [clojure.java.io :as io]
-            [asset-minifier.core :as m]))
+            [asset-minifier.core :as m]
+            [com.stuartsierra.dependency :as dep]))
 
 (defn split-git-url [git-url]
   (let [[_ hostname user repository] (re-find #"git@(.*):(.*)/(.*).git" git-url)]
@@ -59,33 +60,41 @@
 (defn- min-js-file-name [js-file-name]
   (.replaceAll js-file-name ".js$" ".min.js"))
 
-(defn foreign-libs [config]
-  (let [dependency-path (fn [dependency]
-                          (str (:dir config) "/" (:path (js-info dependency))))]
-    {:foreign-libs (vec (map
-                         (fn [dependency]
-                           (let [path (dependency-path dependency)]
-                             {:file path
-                              :file-min (min-js-file-name path)
-                              :provides [(name (:id dependency))]
-                              :requires (vec (map name (:requires dependency)))}))
-                         (filter :js (:dependencies config))))
-     :externs (vec (map dependency-path (filter :js (:dependencies config))))}))
+(defn js-deps-order [config]
+  (let [graph (reduce
+               (fn [g dependency]
+                 (reduce
+                  (fn [g dep]
+                    (dep/depend g (:id dependency) dep))
+                  g
+                  (cons ::nothing (:requires dependency))))
+               (dep/graph)
+               (filter
+                :js
+                (:dependencies config)))]
+    (remove #(= % ::nothing) (dep/topo-sort graph))))
 
-(defn require-parts [config]
-  (vec (map (comp symbol name :id) (filter :js (:dependencies config)))))
+(defn- dependencies-by-id [config]
+  (into
+   {}
+   (map
+    (fn [dependency]
+      [(:id dependency) dependency])
+    (:dependencies config))))
+
+(defn minify-js-cmd [config]
+  (let [dest-file (:js-min-file config (str (:dir config) "/js/js-deps.min.js"))
+        dependencies (dependencies-by-id config)
+        order (map (comp js-info dependencies) (js-deps-order config))
+        paths (vec (map #(str (:dir config) "/" (:path %)) order))]
+    [m/minify-js
+     paths
+     dest-file]))
 
 (defn minify-js [config]
-  (let [paths (map (comp :path js-info) (filter :js (:dependencies config)))]
-    (doseq [path paths]
-      (println "minifying" path)
-      (let [dest-file (io/file (:dir config) (io/file path))
-            min-file (io/file (.getParentFile dest-file) (min-js-file-name (.getName dest-file)))]
-        (m/minify-js
-         dest-file
-         min-file)))))
-
-(defn prepare [config]
-  (download-dependencies config)
-  (minify-js config)
-  (foreign-libs config))
+  (let [[f paths dest-file] (minify-js-cmd config)]
+    (println "minifying js files"
+             (pr-str paths)
+             "into"
+             (pr-str dest-file))
+    (f paths dest-file)))

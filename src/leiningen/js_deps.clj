@@ -8,13 +8,5 @@
       "download"
       (c/download-dependencies
        cfg)
-      "libs"
-      (p/pprint
-       (c/foreign-libs
-        cfg))
-      "require"
-      (println (pr-str (c/require-parts cfg)))
-      "prepare"
-      (p/pprint (c/prepare cfg))
       "minify-js"
       (c/minify-js cfg))))
