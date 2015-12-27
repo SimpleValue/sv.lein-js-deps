@@ -57,10 +57,7 @@
      config
      instructions)))
 
-(defn- min-js-file-name [js-file-name]
-  (.replaceAll js-file-name ".js$" ".min.js"))
-
-(defn js-deps-order [config]
+(defn deps-order [config]
   (let [graph (reduce
                (fn [g dependency]
                  (reduce
@@ -69,9 +66,7 @@
                   g
                   (cons ::nothing (:requires dependency))))
                (dep/graph)
-               (filter
-                :js
-                (:dependencies config)))]
+               (:dependencies config))]
     (remove #(= % ::nothing) (dep/topo-sort graph))))
 
 (defn- dependencies-by-id [config]
@@ -82,18 +77,40 @@
       [(:id dependency) dependency])
     (:dependencies config))))
 
+(defn- paths [key info-fn config]
+  (let [dependencies (dependencies-by-id config)
+        order (map
+               info-fn
+               (filter
+                key
+                (map
+                 dependencies
+                 (deps-order config))))]
+    (vec (map #(str (:dir config) "/" (:path %)) order))))
+
 (defn minify-js-cmd [config]
-  (let [dest-file (:js-min-file config (str (:dir config) "/js/js-deps.min.js"))
-        dependencies (dependencies-by-id config)
-        order (map (comp js-info dependencies) (js-deps-order config))
-        paths (vec (map #(str (:dir config) "/" (:path %)) order))]
+  (let [dest-file (:js-min-file config (str (:dir config) "/js/js-deps.min.js"))]
     [m/minify-js
-     paths
+     (paths :js js-info config)
      dest-file]))
 
 (defn minify-js [config]
   (let [[f paths dest-file] (minify-js-cmd config)]
     (println "minifying js files"
+             (pr-str paths)
+             "into"
+             (pr-str dest-file))
+    (f paths dest-file)))
+
+(defn minify-css-cmd [config]
+  (let [dest-file (:css-min-file config (str (:dir config) "/css/js-deps.min.css"))]
+    [m/minify-css
+     (paths :css css-info config)
+     dest-file]))
+
+(defn minify-css [config]
+  (let [[f paths dest-file] (minify-css-cmd config)]
+    (println "minifying css files"
              (pr-str paths)
              "into"
              (pr-str dest-file))

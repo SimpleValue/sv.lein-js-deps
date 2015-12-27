@@ -9,4 +9,6 @@
       (c/download-dependencies
        cfg)
       "minify-js"
-      (c/minify-js cfg))))
+      (c/minify-js cfg)
+      "minify-css"
+      (c/minify-css cfg))))
