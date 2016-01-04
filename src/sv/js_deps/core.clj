@@ -27,6 +27,12 @@
       :as :stream}))
    dest))
 
+(defn- prepare-dependency [[id dependency]]
+  (assoc dependency :id id))
+
+(defn- get-dependencies [config]
+  (map prepare-dependency (:dependencies config)))
+
 (defn js-info [dependency]
   (let [{:keys [git tag]} dependency]
     {:path (str "js/" (name (:id dependency)) ".js")
@@ -52,7 +58,7 @@
       (download* (:url instruction) dest-file))))
 
 (defn download-dependencies [config]
-  (let [instructions (mapcat download-instructions (:dependencies config))]
+  (let [instructions (mapcat download-instructions (get-dependencies config))]
     (download
      config
      instructions)))
@@ -66,7 +72,7 @@
                   g
                   (cons ::nothing (:requires dependency))))
                (dep/graph)
-               (:dependencies config))]
+               (get-dependencies config))]
     (remove #(= % ::nothing) (dep/topo-sort graph))))
 
 (defn- dependencies-by-id [config]
@@ -75,7 +81,7 @@
    (map
     (fn [dependency]
       [(:id dependency) dependency])
-    (:dependencies config))))
+    (get-dependencies config))))
 
 (defn- paths [key info-fn config]
   (let [dependencies (dependencies-by-id config)
