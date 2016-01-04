@@ -94,8 +94,11 @@
                  (deps-order config))))]
     (vec (map #(str (:dir config) "/" (:path %)) order))))
 
+(defn- get-js-file-path [config]
+  (:js-file config (str (:dir config) "/js/js-deps.js")))
+
 (defn minify-js-cmd [config]
-  (let [dest-file (:js-file config (str (:dir config) "/js/js-deps.js"))]
+  (let [dest-file (get-js-file-path config)]
     [m/minify-js
      (paths :js js-info config)
      dest-file]))
@@ -121,3 +124,17 @@
              "into"
              (pr-str dest-file))
     (f paths dest-file)))
+
+(defn dev-js-script [config]
+  (apply
+   str
+   (map
+    (fn [path]
+      (str "\n/* js-deps path: " path " */\n"
+           (slurp path)))
+    (paths :js js-info config))))
+
+(defn dev-js [config]
+  (let [js-file (io/file (get-js-file-path config))]
+    (.mkdirs (.getParentFile js-file))
+    (spit js-file (dev-js-script config))))

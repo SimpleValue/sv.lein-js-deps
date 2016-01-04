@@ -11,4 +11,6 @@
       "minify-js"
       (c/minify-js cfg)
       "minify-css"
-      (c/minify-css cfg))))
+      (c/minify-css cfg)
+      "dev-js"
+      (c/dev-js cfg))))

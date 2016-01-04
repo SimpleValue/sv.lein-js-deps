@@ -44,3 +44,5 @@
 (defn minify-css []
   (c/minify-css config))
 
+(defn dev-js []
+  (c/dev-js config))
