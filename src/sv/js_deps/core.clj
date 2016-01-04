@@ -95,7 +95,7 @@
     (vec (map #(str (:dir config) "/" (:path %)) order))))
 
 (defn minify-js-cmd [config]
-  (let [dest-file (:js-min-file config (str (:dir config) "/js/js-deps.min.js"))]
+  (let [dest-file (:js-file config (str (:dir config) "/js/js-deps.js"))]
     [m/minify-js
      (paths :js js-info config)
      dest-file]))
