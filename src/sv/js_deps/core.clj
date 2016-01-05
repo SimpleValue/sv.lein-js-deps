@@ -2,7 +2,8 @@
   (:require [clj-http.client :as h]
             [clojure.java.io :as io]
             [asset-minifier.core :as m]
-            [com.stuartsierra.dependency :as dep]))
+            [com.stuartsierra.dependency :as dep]
+            [sv.js-deps.utils :as u]))
 
 (defn split-git-url [git-url]
   (let [[_ hostname user repository] (re-find #"git@(.*):(.*)/(.*).git" git-url)]
@@ -17,8 +18,12 @@
      "https://raw.githubusercontent.com/"
      (interpose "/" [user repository branch-tag-or-commit path]))))
 
+(defn- info [& args]
+  (locking *out*
+    (apply println args)))
+
 (defn download* [url dest]
-  (println "downloading:" url)
+  (info "downloading:" url)
   (io/copy
    (:body
     (h/request
@@ -51,11 +56,14 @@
     (conj (css-info dependency))))
 
 (defn download [config instructions]
-  (doseq [instruction instructions]
-    (let [dir (:dir config)
-          dest-file (io/file dir (io/file (:path instruction)))]
-      (.mkdirs (.getParentFile dest-file))
-      (download* (:url instruction) dest-file))))
+  (u/io-map
+   20
+   (fn [instruction]
+     (let [dir (:dir config)
+           dest-file (io/file dir (io/file (:path instruction)))]
+       (.mkdirs (.getParentFile dest-file))
+       (download* (:url instruction) dest-file)))
+   instructions))
 
 (defn download-dependencies [config]
   (let [instructions (mapcat download-instructions (get-dependencies config))]
@@ -105,10 +113,10 @@
 
 (defn minify-js [config]
   (let [[f paths dest-file] (minify-js-cmd config)]
-    (println "minifying js files"
-             (pr-str paths)
-             "into"
-             (pr-str dest-file))
+    (info "minifying js files"
+          (pr-str paths)
+          "into"
+          (pr-str dest-file))
     (f paths dest-file)))
 
 (defn- get-css-file-path [config]
@@ -122,10 +130,10 @@
 
 (defn minify-css [config]
   (let [[f paths dest-file] (minify-css-cmd config)]
-    (println "minifying css files"
-             (pr-str paths)
-             "into"
-             (pr-str dest-file))
+    (info "minifying css files"
+          (pr-str paths)
+          "into"
+          (pr-str dest-file))
     (f paths dest-file)))
 
 (defn dev-js-script [config]

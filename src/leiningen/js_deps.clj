@@ -4,10 +4,10 @@
 
 (defn js-deps [project & [command]]
   (let [cfg (:js-deps project)]
+    (c/download-dependencies cfg)
     (case command
       "download"
-      (c/download-dependencies
-       cfg)
+      true
       "minify-js"
       (c/minify-js cfg)
       "minify-css"
