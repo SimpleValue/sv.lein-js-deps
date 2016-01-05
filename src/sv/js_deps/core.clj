@@ -112,7 +112,7 @@
     (f paths dest-file)))
 
 (defn minify-css-cmd [config]
-  (let [dest-file (:css-min-file config (str (:dir config) "/css/js-deps.min.css"))]
+  (let [dest-file (:css-file config (str (:dir config) "/css/js-deps.min.css"))]
     [m/minify-css
      (paths :css css-info config)
      dest-file]))
