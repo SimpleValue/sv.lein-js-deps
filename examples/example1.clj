@@ -46,3 +46,6 @@
 
 (defn dev-js []
   (c/dev-js config))
+
+(defn dev-css []
+  (c/dev-css config))

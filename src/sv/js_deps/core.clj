@@ -111,8 +111,11 @@
              (pr-str dest-file))
     (f paths dest-file)))
 
+(defn- get-css-file-path [config]
+  (:css-file config (str (:dir config) "/css/js-deps.css")))
+
 (defn minify-css-cmd [config]
-  (let [dest-file (:css-file config (str (:dir config) "/css/js-deps.css"))]
+  (let [dest-file (get-css-file-path config)]
     [m/minify-css
      (paths :css css-info config)
      dest-file]))
@@ -138,3 +141,17 @@
   (let [js-file (io/file (get-js-file-path config))]
     (.mkdirs (.getParentFile js-file))
     (spit js-file (dev-js-script config))))
+
+(defn dev-css-file [config]
+  (apply
+   str
+   (map
+    (fn [path]
+      (str "\n/* js-deps path: " path " */\n"
+           (slurp path)))
+    (paths :css css-info config))))
+
+(defn dev-css [config]
+  (let [css-file (io/file (get-css-file-path config))]
+    (.mkdirs (.getParentFile css-file))
+    (spit css-file (dev-css-file config))))
